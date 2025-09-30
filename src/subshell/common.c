@@ -1274,7 +1274,7 @@ init_subshell_precmd (void)
             " zle -N mc_print_cursor_position\n"
             " bindkey '^[" SHELL_CURSOR_KEYBINDING "' mc_print_cursor_position\n"
             /* If original zle-line-init exists, save it */
-            " if zle -l | grep -q '^zle-line-init$'; then\n"  
+            " if (( $+widgets[zle-line-init] )); then\n"
             "   zle -A zle-line-init mc-original-zle-line-init\n"
             " fi\n"
             /* Our own zle-line-init */
