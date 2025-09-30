@@ -931,6 +931,12 @@ feed_subshell (int how, gboolean fail_on_error)
 
             synchronize ();
 
+            // ZSH: Always wait for ZLE initialization after precmd (second STOP)
+            if (mc_global.shell->type == SHELL_ZSH)
+            {
+                synchronize ();  // Wait for _mc_zle_init hook STOP
+            }
+
             clear_subshell_prompt_string ();
             should_read_new_subshell_prompt = TRUE;
             subshell_ready = TRUE;
@@ -1267,7 +1273,26 @@ init_subshell_precmd (void)
             " mc_print_cursor_position () { echo $CURSOR >&%d}\n"
             " zle -N mc_print_cursor_position\n"
             " bindkey '^[" SHELL_CURSOR_KEYBINDING "' mc_print_cursor_position\n"
-            " _mc_precmd(){ pwd>&%d;kill -STOP $$ }; precmd_functions=(_mc_precmd $precmd_functions)\n"
+            /* If original zle-line-init exists, save it */
+            " if zle -l | grep -q '^zle-line-init$'; then\n"  
+            "   zle -A zle-line-init mc-original-zle-line-init\n"
+            " fi\n"
+            /* Our own zle-line-init */
+            " _mc_zle_init() {\n" 
+                /* If original zle-line-init exists, call it */
+            "   [[ $+widgets[mc-original-zle-line-init] == 1 ]] && zle mc-original-zle-line-init\n"
+                /* Remove hook to prevent multiple runs */
+            "   zle -D zle-line-init 2>/dev/null\n"  
+            "   kill -STOP $$\n"
+            " }\n"
+            /* Precmd hook */
+            " _mc_precmd(){\n"  /* Precmd hook */
+            "   pwd>&%d\n"
+            "   kill -STOP $$\n"
+                /* Set our own zle-line-init */
+            "   zle -N zle-line-init _mc_zle_init 2>/dev/null\n"
+            " }; precmd_functions+=(_mc_precmd)\n"
+            
             "PS1='%%n@%%m:%%~%%# '\n",
             command_buffer_pipe[WRITE], command_buffer_pipe[WRITE], subshell_pipe[WRITE]);
 
@@ -1679,14 +1704,7 @@ init_subshell (void)
     if (use_persistent_buffer)
     {
         gboolean test_passed = FALSE;
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-        /* On BSD systems, we need a small delay to ensure proper initialization.
-         * This allows the shell's precmd_functions array to be properly set up
-         * with MC's hook in the first position, and gives time for SIGCHLD
-         * handling to stabilize after SIGCONT. Paradoxically, this delay
-         * actually makes startup faster by avoiding failed test retries. */
-        g_usleep (100000);  /* 100ms */
-#endif
+
         test_passed = read_command_line_buffer (TRUE);
         if (!test_passed)
             use_persistent_buffer = FALSE;
