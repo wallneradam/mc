@@ -1278,21 +1278,20 @@ init_subshell_precmd (void)
             "   zle -A zle-line-init mc-original-zle-line-init\n"
             " fi\n"
             /* Our own zle-line-init */
-            " _mc_zle_init() {\n" 
+            " _mc_zle_init() {" 
                 /* If original zle-line-init exists, call it */
-            "   [[ $+widgets[mc-original-zle-line-init] == 1 ]] && zle mc-original-zle-line-init\n"
+            "   [[ $+widgets[mc-original-zle-line-init] == 1 ]] && zle mc-original-zle-line-init;"
                 /* Remove hook to prevent multiple runs */
-            "   zle -D zle-line-init 2>/dev/null\n"  
-            "   kill -STOP $$\n"
+            "   zle -D zle-line-init 2>/dev/null;"  
+            "   kill -STOP $$"
             " }\n"
             /* Precmd hook */
-            " _mc_precmd(){\n"  /* Precmd hook */
-            "   pwd>&%d\n"
-            "   kill -STOP $$\n"
+            " _mc_precmd(){"
+            "   pwd>&%d;"
+            "   kill -STOP $$;"
                 /* Set our own zle-line-init */
-            "   zle -N zle-line-init _mc_zle_init 2>/dev/null\n"
+            "   zle -N zle-line-init _mc_zle_init 2>/dev/null"
             " }; precmd_functions+=(_mc_precmd)\n"
-            
             "PS1='%%n@%%m:%%~%%# '\n",
             command_buffer_pipe[WRITE], command_buffer_pipe[WRITE], subshell_pipe[WRITE]);
 
